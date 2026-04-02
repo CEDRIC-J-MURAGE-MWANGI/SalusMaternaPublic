@@ -344,5 +344,3 @@ A one-time personal calibration against a reference cuff-based monitor is requir
 8. ESP32 Technical Reference Manual — Espressif Systems.
 9. Moens, I.A. & Korteweg, D.J. — Pulse Wave Velocity derivation for arterial stiffness estimation.
 10. Beer-Lambert Law — optical absorption model for PPG-based arterial diameter change estimation.
-*Developer: Cedric Murage Mwangi | Reg No: J23/5508/2020*  
-*Last Updated: February 2026 | Version: 1.0*
