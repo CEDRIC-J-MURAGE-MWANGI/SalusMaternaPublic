@@ -1,9 +1,7 @@
 # SALUS.MATERNA — AI & Solar-Powered Maternal Health Monitoring System
-### *Kenyatta University | BSc Biomedical Engineering | EBM500 Final Year Project*
 
 ![Status](https://img.shields.io/badge/Status-Prototype%20Complete-success)
 ![Platform](https://img.shields.io/badge/Platform-ESP32%20%2B%20Azure-blue)
-![License](https://img.shields.io/badge/License-Healthcare%20%26%20Research%20Use-green)
 ![Power](https://img.shields.io/badge/Power-Solar%20Powered-yellow)
 
 ---
@@ -295,7 +293,6 @@ A one-time personal calibration against a reference cuff-based monitor is requir
 - Access controlled via **Azure RBAC**
 - Architecture supports **HIPAA compliance** with appropriate configuration (BAA with Microsoft, audit logging, data retention policies)
 
-> ⚠️ **Important:** This repository does not and should not contain any connection strings, API keys, Wi-Fi SSIDs, phone numbers, or other secrets. Configure all credentials via environment variables or Azure Application Settings.
 
 ---
 
@@ -347,43 +344,5 @@ A one-time personal calibration against a reference cuff-based monitor is requir
 8. ESP32 Technical Reference Manual — Espressif Systems.
 9. Moens, I.A. & Korteweg, D.J. — Pulse Wave Velocity derivation for arterial stiffness estimation.
 10. Beer-Lambert Law — optical absorption model for PPG-based arterial diameter change estimation.
-
----
-
-## 🤝 Contributing & Collaboration
-
-Research and collaboration opportunities include:
-- Clinical validation studies
-- Model optimization with larger datasets
-- Multi-site pilot deployments
-- Integration with national EHR systems
-- Miniaturization and wearable form factor
-
-
----
-
-## 📄 License
-
-This system is intended for **healthcare and research use**.
-
-Before clinical deployment, ensure:
-- Ethical review board (ERB/IRB) approval
-- Regulatory compliance (KEBS, and relevant medical device regulations)
-- Clinical validation with a sufficient patient cohort
-- Informed patient consent protocols
-
----
-
-## 🙏 Acknowledgments
-
-**Supervisor:** Eng. Martin Nzomo, Department of Electrical and Electronics Engineering, Kenyatta University
-
-Thanks also to the open-source communities behind Arduino, Python, and the Azure SDK; to healthcare workers in rural Kenya whose domain expertise shaped this project; and to all those supporting the reduction of preventable maternal deaths.
-
----
-
-**Built for maternal healthcare in Kenya 🇰🇪**
-
-*Project: SALUS.MATERNA | Kenyatta University, School of Engineering and Architecture*  
 *Developer: Cedric Murage Mwangi | Reg No: J23/5508/2020*  
 *Last Updated: February 2026 | Version: 1.0*
