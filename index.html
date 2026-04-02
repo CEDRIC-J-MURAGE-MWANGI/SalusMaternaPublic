@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SALVS.MATERNA - Maternal Health Monitoring System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            overflow-x: hidden;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 10px;
+        }
+
+        .header {
+            background: white;
+            border-radius: 20px;
+            padding: 30px 20px;
+            margin: 0 auto 20px auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 100%;
+        }
+
+        .header img {
+            max-width: 100%;
+            width: 280px;
+            margin: 0 auto 15px auto;
+            display: block;
+            background: white;
+            padding: 15px;
+            border-radius: 20px;
+            object-fit: contain;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .patient-setup {
+            grid-column: 1 / -1;
+        }
+
+        .option-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .option-btn {
+            padding: 30px;
+            border: 3px solid #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 1.3em;
+            font-weight: 600;
+            transition: all 0.3s;
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .option-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.6);
+        }
+
+        .option-btn i {
+            display: block;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .patient-form {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .patient-form.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1.1em;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+        }
+
+        .monitoring-section {
+            display: none;
+        }
+
+        .monitoring-section.active {
+            display: block;
+        }
+
+        .vital-signs {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .vital-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            padding: 25px;
+            border-radius: 15px;
+            color: white;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .vital-card.heart-rate {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        .vital-card.oxygen {
+            background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+        }
+
+        .vital-card.temperature {
+            background: linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%);
+        }
+
+        .vital-card.blood-pressure {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        }
+
+        .bp-sys {
+            font-size: 2.6em;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .bp-sys-label {
+            font-size: 0.75em;
+            opacity: 0.85;
+            vertical-align: super;
+            margin-left: 3px;
+        }
+
+        .bp-dia-row {
+            margin-top: 6px;
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+
+        .bp-dia-label {
+            font-size: 0.65em;
+            opacity: 0.85;
+            vertical-align: super;
+            margin-left: 3px;
+        }
+
+        .bp-unit {
+            font-size: 0.85em;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+
+        .vital-icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .vital-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .vital-value {
+            font-size: 3em;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .vital-unit {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .risk-assessment {
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+
+        .risk-assessment.low-risk {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            color: #0f5132;
+        }
+
+        .risk-assessment.moderate-risk {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #664d03;
+        }
+
+        .risk-assessment.high-risk {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            color: #842029;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .risk-icon {
+            font-size: 4em;
+            margin-bottom: 15px;
+        }
+
+        .risk-label {
+            font-size: 1.5em;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .risk-probability {
+            font-size: 1.2em;
+            opacity: 0.8;
+        }
+
+        .patient-info-display {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .patient-info-display p {
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            color: #333;
+        }
+
+        .patient-info-display strong {
+            color: #667eea;
+        }
+
+        .history-card {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .history-entry {
+            padding: 15px;
+            border-left: 4px solid #667eea;
+            margin-bottom: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .history-entry .timestamp {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .history-entry .values {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .connection-status {
+            padding: 10px 20px;
+            border-radius: 20px;
+            display: inline-block;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .connection-status.connected {
+            background: #d1e7dd;
+            color: #0f5132;
+        }
+
+        .connection-status.disconnected {
+            background: #f8d7da;
+            color: #842029;
+        }
+
+        .alert-section {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert-section.active {
+            display: block;
+        }
+
+        .alert-section h3 {
+            color: #664d03;
+            margin-bottom: 10px;
+        }
+
+        .realtime-alerts {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            border-left: 5px solid #667eea;
+        }
+
+        .realtime-alerts h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 1.1em;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .alert-item.warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            color: #664d03;
+        }
+
+        .alert-item.danger {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            color: #842029;
+        }
+
+        .alert-item.info {
+            background: #d1ecf1;
+            border-left: 4px solid #0dcaf0;
+            color: #055160;
+        }
+
+        .alert-icon {
+            font-size: 1.5em;
+        }
+
+        .no-alerts {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+            font-style: italic;
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .vital-signs {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .option-buttons {
+                grid-template-columns: 1fr;
+            }
+
+           .header img {
+                width: 113%;
+                max-width: none;
+                padding: 0px;
+                margin-left: -6%;
+           }
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <img src="images/logo_centered.png" alt="SALVS.MATERNA Logo" style="max-width: 400px; margin-bottom: 15px;">
+            <p>Maternal Health Monitoring System</p>
+            <div id="connectionStatus" class="connection-status disconnected">
+                ● Waiting for Device Connection
+            </div>
+        </div>
+        <!-- Patient Setup Section -->
+        <div id="patientSetup" class="card patient-setup">
+            <h2>Patient Setup</h2>
+
+            <div class="option-buttons">
+                <button class="option-btn" onclick="selectOption('continue')">
+                    <i>👤</i>
+                    Continue Last Patient
+                </button>
+                <button class="option-btn" onclick="selectOption('new')">
+                    <i>➕</i>
+                    New Patient
+                </button>
+            </div>
+
+            <!-- New Patient Form -->
+            <div id="newPatientForm" class="patient-form">
+                <h3 style="margin-bottom: 20px; color: #667eea;">Enter New Patient Information</h3>
+                <div class="form-group">
+                    <label for="patientId">Patient ID</label>
+                    <input type="text" id="patientId" placeholder="e.g., KMH-2025-000008" required>
+                </div>
+                <div class="form-group">
+                    <label for="patientAge">Age</label>
+                    <input type="number" id="patientAge" placeholder="Enter patient age" min="18" max="50" required>
+                </div>
+                <button class="submit-btn" onclick="submitNewPatient()">Start Monitoring</button>
+            </div>
+
+            <!-- Continue Patient Display -->
+            <div id="continuePatientInfo" class="patient-form">
+                <h3 style="margin-bottom: 20px; color: #667eea;">Last Patient Information</h3>
+                <div class="patient-info-display">
+                    <p><strong>Patient ID:</strong> <span id="lastPatientId">Loading...</span></p>
+                    <p><strong>Age:</strong> <span id="lastPatientAge">Loading...</span></p>
+                    <p><strong>Last Hour:</strong> <span id="lastHour">Loading...</span></p>
+                </div>
+                <button class="submit-btn" onclick="continueLastPatient()">Continue Monitoring</button>
+            </div>
+        </div>
+
+        <!-- Monitoring Section -->
+        <div id="monitoringSection" class="monitoring-section">
+            <!-- Patient Info Display -->
+            <div class="card">
+                <h2>Patient Information</h2>
+                <div class="patient-info-display">
+                    <p><strong>Patient ID:</strong> <span id="currentPatientId">-</span></p>
+                    <p><strong>Age:</strong> <span id="currentPatientAge">-</span></p>
+                    <p><strong>Monitoring Hour:</strong> <span id="currentHour">-</span></p>
+                    <p><strong>Status:</strong> <span id="monitoringStatus">Stabilizing...</span></p>
+                </div>
+            </div>
+
+            <!-- Real-Time Alerts -->
+            <div class="card realtime-alerts">
+                <h2><span style="font-size: 1.2em;">🔔</span> Real-Time Alerts</h2>
+                <div id="realtimeAlertsContainer">
+                    <div class="no-alerts">No alerts at this time - all vitals normal</div>
+                </div>
+            </div>
+
+            <!-- Alert Section -->
+            <div id="alertSection" class="alert-section">
+                <h3>⚠️ Alert</h3>
+                <p id="alertMessage"></p>
+            </div>
+
+            <!-- Main Grid -->
+            <div class="main-grid">
+                <!-- Vital Signs -->
+                <div class="card">
+                    <h2>Vital Signs</h2>
+                    <div class="vital-signs">
+                        <div class="vital-card heart-rate">
+                            <span class="vital-icon">❤️</span>
+                            <div class="vital-label">Heart Rate</div>
+                            <div class="vital-value" id="heartRate">--</div>
+                            <div class="vital-unit">bpm</div>
+                        </div>
+                        <div class="vital-card oxygen">
+                            <span class="vital-icon">🩸</span>
+                            <div class="vital-label">Oxygen Saturation</div>
+                            <div class="vital-value" id="oxygenSat">--</div>
+                            <div class="vital-unit">%</div>
+                        </div>
+                        <div class="vital-card temperature">
+                            <span class="vital-icon">🌡️</span>
+                            <div class="vital-label">Temperature</div>
+                            <div class="vital-value" id="temperature">--</div>
+                            <div class="vital-unit">°C</div>
+                        </div>
+                        <div class="vital-card blood-pressure">
+                            <span class="vital-icon">💉</span>
+                            <div class="vital-label">Blood Pressure</div>
+                            <div class="bp-sys">
+                                <span id="systolicBP">--</span><span class="bp-sys-label">SYS</span>
+                            </div>
+                            <div class="bp-dia-row">
+                                <span id="diastolicBP">--</span><span class="bp-dia-label">DIA</span>
+                            </div>
+                            <div class="bp-unit">mmHg</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Risk Assessment -->
+                <div class="card">
+                    <h2>Risk Assessment</h2>
+                    <div id="riskAssessment" class="risk-assessment low-risk">
+                        <div class="risk-icon">📊</div>
+                        <div class="risk-label">Analyzing...</div>
+                        <div class="risk-probability">Waiting for data</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History -->
+            <div class="card history-card">
+                <h2>Monitoring History</h2>
+                <div id="historyContainer">
+                    <p style="text-align: center; color: #666;">No readings yet</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+    <script>
+        const AZURE_FUNCTION_URL = 'https://maternal-sepsis-monitor-e7hhgma6bsc8bae2.southafricanorth-01.azurewebsites.net/api';
+
+        let currentPatient = {
+            id: null,
+            age: null,
+            hour: 1
+        };
+
+        let monitoringHistory = [];
+        let isMonitoring = false;
+
+        window.onload = function() {
+            checkESP32Connection();
+        };
+
+        function updateConnectionStatus(connected) {
+            const statusEl = document.getElementById('connectionStatus');
+            if (connected) {
+                statusEl.className = 'connection-status connected';
+                statusEl.textContent = '● Device Connected';
+            } else {
+                statusEl.className = 'connection-status disconnected';
+                statusEl.textContent = '● Device Disconnected';
+            }
+        }
+
+        async function checkESP32Connection() {
+            try {
+                const response = await fetch('http://10.64.132.100/get_sensor_data', {
+                    method: 'GET',
+                    timeout: 3000
+                });
+
+                if (response.ok) {
+                    updateConnectionStatus(true);
+                } else {
+                    updateConnectionStatus(false);
+                }
+            } catch (error) {
+                updateConnectionStatus(false);
+            }
+
+            setTimeout(checkESP32Connection, 5000);
+        }
+
+        function selectOption(option) {
+            const newForm = document.getElementById('newPatientForm');
+            const continueForm = document.getElementById('continuePatientInfo');
+
+            if (option === 'new') {
+                newForm.classList.add('active');
+                continueForm.classList.remove('active');
+            } else {
+                continueForm.classList.add('active');
+                newForm.classList.remove('active');
+                loadLastPatientInfo();
+            }
+        }
+
+        async function loadLastPatientInfo() {
+            try {
+                const response = await fetch(`${AZURE_FUNCTION_URL}/get_patient_info`);
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('lastPatientId').textContent = data.last_patient_id;
+                    document.getElementById('lastPatientAge').textContent = data.age;
+                    document.getElementById('lastHour').textContent = data.last_hour;
+
+                    currentPatient.id = data.last_patient_id;
+                    currentPatient.age = data.age;
+                    currentPatient.hour = data.last_hour + 1;
+                }
+            } catch (error) {
+                console.error('Failed to load patient info:', error);
+                alert('Failed to load last patient information. Please try again.');
+            }
+        }
+
+        async function submitNewPatient() {
+            const patientId = document.getElementById('patientId').value;
+            const patientAge = document.getElementById('patientAge').value;
+
+            if (!patientId || !patientAge) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            try {
+                const esp32Response = await fetch('http://10.64.132.100/set_patient', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        patient_id: patientId,
+                        age: parseInt(patientAge)
+                    })
+                });
+
+                if (esp32Response.ok) {
+                    currentPatient.id = patientId;
+                    currentPatient.age = parseInt(patientAge);
+                    currentPatient.hour = 1;
+
+                    startMonitoring();
+                } else {
+                    alert('Failed to set patient info on ESP32');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Could not connect to ESP32. Make sure it is on the same network.');
+            }
+        }
+
+        function continueLastPatient() {
+            startMonitoring();
+        }
+
+        function startMonitoring() {
+            document.getElementById('patientSetup').style.display = 'none';
+            document.getElementById('monitoringSection').classList.add('active');
+
+            document.getElementById('currentPatientId').textContent = currentPatient.id;
+            document.getElementById('currentPatientAge').textContent = currentPatient.age;
+            document.getElementById('currentHour').textContent = currentPatient.hour;
+            document.getElementById('monitoringStatus').textContent = 'Stabilizing (65 seconds)...';
+
+            isMonitoring = true;
+
+            let countdown = 65;
+            const stabilizationTimer = setInterval(() => {
+                countdown--;
+                document.getElementById('monitoringStatus').textContent = `Stabilizing (${countdown} seconds)...`;
+
+                if (countdown <= 0) {
+                    clearInterval(stabilizationTimer);
+                    document.getElementById('monitoringStatus').textContent = 'Active Monitoring';
+                    startDataPolling();
+                }
+            }, 1000);
+        }
+
+        function startDataPolling() {
+            setInterval(() => {
+                if (isMonitoring) {
+                    fetchRealSensorData();
+                }
+            }, 2000);
+        }
+
+        function updateDashboard(data) {
+            document.getElementById('heartRate').textContent = data.vital_signs.hr;
+            document.getElementById('oxygenSat').textContent = data.vital_signs.spo2;
+            document.getElementById('temperature').textContent = data.vital_signs.temp.toFixed(1);
+
+            // Display BP values from ESP32; show '--' if not yet computed by the device
+            const sbp = data.vital_signs.sbp && data.vital_signs.sbp > 0 ? data.vital_signs.sbp : '--';
+            const dbp = data.vital_signs.dbp && data.vital_signs.dbp > 0 ? data.vital_signs.dbp : '--';
+            document.getElementById('systolicBP').textContent = sbp;
+            document.getElementById('diastolicBP').textContent = dbp;
+
+            document.getElementById('currentHour').textContent = data.hour;
+
+            const riskEl = document.getElementById('riskAssessment');
+            riskEl.className = `risk-assessment low-risk`;
+            riskEl.innerHTML = `
+                <div class="risk-icon">✅</div>
+                <div class="risk-label">NORMAL</div>
+                <div class="risk-probability">All vitals within normal range</div>
+            `;
+
+            if (data.uploading) {
+                showUploadingAlert();
+            } else {
+                updateRealtimeAlerts(data.vital_signs);
+            }
+
+            addHistoryEntry(data);
+        }
+
+        function updateRealtimeAlerts(vitals) {
+            const alertsContainer = document.getElementById('realtimeAlertsContainer');
+            let alerts = [];
+            let abnormalCount = 0;
+
+            if (vitals.temp < 36.0) {
+                abnormalCount++;
+                alerts.push({ type: 'warning', icon: '🌡️', message: `Temperature LOW: ${vitals.temp.toFixed(1)}°C (Normal: 36-38°C)` });
+            } else if (vitals.temp > 38.0) {
+                abnormalCount++;
+                alerts.push({ type: 'danger', icon: '🌡️', message: `Temperature HIGH: ${vitals.temp.toFixed(1)}°C (Normal: 36-38°C)` });
+            }
+
+            if (vitals.hr < 60) {
+                abnormalCount++;
+                alerts.push({ type: 'warning', icon: '❤️', message: `Heart Rate LOW: ${vitals.hr} bpm (Normal: 60-100 bpm)` });
+            } else if (vitals.hr > 100) {
+                abnormalCount++;
+                alerts.push({ type: 'danger', icon: '❤️', message: `Heart Rate HIGH: ${vitals.hr} bpm (Normal: 60-100 bpm)` });
+            }
+
+            if (vitals.spo2 < 95) {
+                abnormalCount++;
+                alerts.push({ type: 'danger', icon: '🩸', message: `Oxygen Saturation LOW: ${vitals.spo2}% (Normal: ≥95%)` });
+            }
+
+            // BP alerts using real device values
+            if (vitals.sbp && vitals.sbp > 0) {
+                if (vitals.sbp > 160) {
+                    abnormalCount++;
+                    alerts.push({ type: 'danger', icon: '💉', message: `Systolic BP HIGH: ${vitals.sbp} mmHg (Severe hypertension threshold: 160 mmHg)` });
+                } else if (vitals.sbp > 140) {
+                    abnormalCount++;
+                    alerts.push({ type: 'warning', icon: '💉', message: `Systolic BP ELEVATED: ${vitals.sbp} mmHg (Normal: <140 mmHg)` });
+                }
+            }
+
+            if (vitals.dbp && vitals.dbp > 0) {
+                if (vitals.dbp > 110) {
+                    abnormalCount++;
+                    alerts.push({ type: 'danger', icon: '💉', message: `Diastolic BP HIGH: ${vitals.dbp} mmHg (Severe hypertension threshold: 110 mmHg)` });
+                }
+            }
+
+            let severityMessage = '';
+            if (abnormalCount === 1) {
+                severityMessage = `
+                    <div class="alert-item danger" style="background: #f8d7da; border-left: 4px solid #dc3545; font-weight: 600;">
+                        <span class="alert-icon">🚨</span>
+                        <span>1 ABNORMAL PARAMETER </span>
+                    </div>
+                `;
+            } else if (abnormalCount >= 2) {
+                severityMessage = `
+                    <div class="alert-item danger" style="background: #f8d7da; border-left: 4px solid #dc3545; font-weight: 600; animation: pulse 2s infinite;">
+                        <span class="alert-icon">⚠️</span>
+                        <span>MULTIPLE ABNORMAL PARAMETERS</span>
+                    </div>
+                `;
+            }
+
+            if (alerts.length === 0) {
+                alertsContainer.innerHTML = `
+                    <div class="alert-item info" style="background: #d1f2eb; border-left: 4px solid #0f5132;">
+                        <span class="alert-icon">✅</span>
+                        <span>All vitals normal</span>
+                    </div>
+                `;
+            } else {
+                alertsContainer.innerHTML = severityMessage + alerts.map(alert => `
+                    <div class="alert-item ${alert.type}">
+                        <span class="alert-icon">${alert.icon}</span>
+                        <span>${alert.message}</span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function showUploadingAlert() {
+            const alertsContainer = document.getElementById('realtimeAlertsContainer');
+            alertsContainer.innerHTML = `
+                <div class="alert-item info" style="background: #d1ecf1; border-left: 4px solid #0dcaf0;">
+                    <span class="alert-icon">📤</span>
+                    <span>Uploading data to cloud...</span>
+                </div>
+            `;
+        }
+
+        function addHistoryEntry(data) {
+            const historyContainer = document.getElementById('historyContainer');
+
+            const entry = document.createElement('div');
+            entry.className = 'history-entry';
+            const sysVal = data.vital_signs.sbp && data.vital_signs.sbp > 0 ? data.vital_signs.sbp + ' mmHg' : '--';
+            const diaVal = data.vital_signs.dbp && data.vital_signs.dbp > 0 ? data.vital_signs.dbp + ' mmHg' : '--';
+            entry.innerHTML = `
+                <div class="timestamp">${new Date(data.timestamp).toLocaleString()}</div>
+                <div><strong>Risk:</strong> ${data.risk_level} (${(data.risk_probability * 100).toFixed(1)}%)</div>
+                <div class="values">
+                    <div>HR: ${data.vital_signs.hr} bpm</div>
+                    <div>SpO2: ${data.vital_signs.spo2}%</div>
+                    <div>Temp: ${data.vital_signs.temp}°C</div>
+                    <div>Systolic BP: ${sysVal}</div>
+                    <div>Diastolic BP: ${diaVal}</div>
+                </div>
+            `;
+
+            if (historyContainer.firstChild && historyContainer.firstChild.tagName !== 'P') {
+                historyContainer.insertBefore(entry, historyContainer.firstChild);
+            } else {
+                historyContainer.innerHTML = '';
+                historyContainer.appendChild(entry);
+            }
+
+            while (historyContainer.children.length > 10) {
+                historyContainer.removeChild(historyContainer.lastChild);
+            }
+        }
+
+        function showUploadNotification(message) {
+            const alertSection = document.getElementById('alertSection');
+            const alertMessage = document.getElementById('alertMessage');
+
+            alertMessage.textContent = '📤 ' + message;
+            alertSection.className = 'alert-section active';
+            alertSection.style.background = '#d1ecf1';
+            alertSection.style.borderLeft = '5px solid #0c5460';
+
+            setTimeout(() => {
+                alertSection.classList.remove('active');
+                alertSection.style.background = '#fff3cd';
+                alertSection.style.borderLeft = '5px solid #ffc107';
+            }, 3000);
+        }
+
+        async function fetchRealSensorData() {
+            try {
+                const response = await fetch('http://10.64.132.100/get_sensor_data');
+
+                if (!response.ok) {
+                    console.error('Failed to fetch sensor data: HTTP', response.status);
+                    return;
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    updateDashboard(data);
+                } else {
+                    console.log('Sensor data not ready:', data);
+                }
+            } catch (error) {
+                console.error('Failed to fetch sensor data:', error);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,341 @@
+# SALUS.MATERNA System Architecture
+## Visual Reference Guide
+
+```
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║                              PATIENT BED UNIT                                    ║
+║  ┌──────────────────────────────────────────────────────────────────────────┐   ║
+║  │                            ESP32 DEVICE                                   │   ║
+║  │                    (ESP32-WROOM-32, Dual-core 240MHz)                     │   ║
+║  │                                                                            │   ║
+║  │  ┌─────────────────────────────────────────────────────────────────────┐  │   ║
+║  │  │             WRIST / RADIAL ARTERY SENSOR ARRAY                       │  │   ║
+║  │  │                                                                      │  │   ║
+║  │  │  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐            │  │   ║
+║  │  │  │  Piezo #1    │   │   MAX30102   │   │  Piezo #2    │            │  │   ║
+║  │  │  │  (Proximal)  │   │  PPG Sensor  │   │  (Distal)    │            │  │   ║
+║  │  │  │              │   │              │   │              │            │  │   ║
+║  │  │  │ Detects      │   │ 660nm Red +  │   │ Detects      │            │  │   ║
+║  │  │  │ pulse first  │   │ 940nm IR     │   │ pulse second │            │  │   ║
+║  │  │  │ (t₁)         │   │              │   │ (t₂)         │            │  │   ║
+║  │  │  └──────┬───────┘   └──────┬───────┘   └──────┬───────┘            │  │   ║
+║  │  │         │                  │                   │                    │  │   ║
+║  │  │         │   ←── L = 10–20 mm fixed ──────────▶│                    │  │   ║
+║  │  └─────────┼──────────────────┼───────────────────┼────────────────────┘  │   ║
+║  │            │                  │                   │                        │   ║
+║  │            ▼                  │                   ▼                        │   ║
+║  │  ┌──────────────────────┐     │      ┌──────────────────────┐             │   ║
+║  │  │  LM1458 Signal       │     │      │  LM1458 Signal       │             │   ║
+║  │  │  Conditioning        │     │      │  Conditioning         │             │   ║
+║  │  │  (GPIO34 / ADC1)     │     │      │  (GPIO35 / ADC1)     │             │   ║
+║  │  │  Stage1: Buffer      │     │      │  Stage1: Buffer       │             │   ║
+║  │  │  BPF: 0.59–10.6 Hz   │     │      │  BPF: 0.59–10.6 Hz   │             │   ║
+║  │  │  Stage2: Gain 18×    │     │      │  Stage2: Gain 18×    │             │   ║
+║  │  └──────────┬───────────┘     │      └──────────┬───────────┘             │   ║
+║  │             │                 │                  │                         │   ║
+║  │             └─────────────────┼──────────────────┘                        │   ║
+║  │                               ▼                                            │   ║
+║  │  ┌────────────────────────────────────────────────────────────────────┐   │   ║
+║  │  │               BP COMPUTATION PIPELINE (every 5s)                   │   │   ║
+║  │  │  1. Sample both piezo channels @ 2 kHz via ADC1                   │   │   ║
+║  │  │  2. IIR Butterworth BPF (0.5–8 Hz) applied per channel            │   │   ║
+║  │  │  3. Cross-correlate → PTT = t₂ − t₁ (µs resolution)              │   │   ║
+║  │  │  4. PWV = L / PTT                                                  │   │   ║
+║  │  │  5. PIR = I_H / I_L  (from MAX30102 IR channel)                   │   │   ║
+║  │  │  6. ΔD = ln(PIR) / α   (Beer-Lambert, 940 nm)                    │   │   ║
+║  │  │  7. MAP via Moens-Korteweg + Hughes-Dijk stiffness model          │   │   ║
+║  │  │  8. SBP = MAP + (2/3)×PP   |   DBP = MAP − (1/3)×PP              │   │   ║
+║  │  └────────────────────────────────────────────────────────────────────┘   │   ║
+║  │                                                                            │   ║
+║  │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                │   ║
+║  │  │  MLX90614ESF │    │   OLED       │    │  Alert LEDs  │                │   ║
+║  │  │  Non-Contact │    │  SSD1306     │    │ Blue/Yellow/ │                │   ║
+║  │  │  IR Thermo   │───▶│  128×64      │    │   Red        │                │   ║
+║  │  │              │    │              │    │              │                │   ║
+║  │  │ Temp: 37.2°C │    │ HR: 75 bpm   │    │ [●][○][○]    │                │   ║
+║  │  │ ±0.5°C       │    │ SpO₂: 97%   │    │              │                │   ║
+║  │  │ (I2C 0x5A)   │    │ T: 37.2°C   │    │  Buzzer ♪    │                │   ║
+║  │  │              │    │ SBP: 118     │    │              │                │   ║
+║  │  │              │    │ DBP:  76     │    └──────────────┘                │   ║
+║  │  │              │    │ Risk: LOW    │                                     │   ║
+║  │  └──────────────┘    └──────────────┘                                     │   ║
+║  │                                                                            │   ║
+║  │  SOLAR POWER SUBSYSTEM:                                                   │   ║
+║  │  6V 1.5W PV Panel → TP4056 Charge Controller → 18650 Li-ion 2600mAh     │   ║
+║  │  → LM2596 Buck Converter (3.7V→5V) → ESP32 + Peripherals (~0.85 W avg)  │   ║
+║  │                                                                            │   ║
+║  │  Firmware Task Schedule (cooperative multitasking on Arduino loop()):    │   ║
+║  │  • Sensor read (MAX30102 + piezo ADC):    every 40 ms  (25 Hz)          │   ║
+║  │  • Temperature (MLX90614ESF):             every 1 s                      │   ║
+║  │  • BP pipeline (PTT/PIR/MAP/SBP/DBP):    every 5 s                      │   ║
+║  │  • Display update (OLED):                 every 2 s                      │   ║
+║  │  • Alert evaluation:                       every 1 s                      │   ║
+║  │  • Cloud data transmission:               every 60 s                     │   ║
+║  │                                                                            │   ║
+║  │  Cloud Upload Cycle (every 60 seconds):                                  │   ║
+║  │  1. Prepare JSON: {patient_id, hour, age, hr, spo2, temp, sbp, dbp}    │   ║
+║  │  2. Send HTTPS POST to Azure Function /api/predict_risk                  │   ║
+║  │  3. Receive risk score (0–100) + alert flags                             │   ║
+║  │  4. Update LEDs based on risk level                                       │   ║
+║  │  5. Trigger buzzer/SMS/call if high risk                                  │   ║
+║  └──────────────────────────────────────────────────────────────────────────┘   ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+                                    │
+                                    │ WiFi (802.11 b/g/n)
+                                    │ HTTPS / TLS 1.2
+                                    ▼
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║                          AZURE CLOUD PLATFORM                                    ║
+║                    (Region: South Africa North)                                   ║
+║                                                                                  ║
+║  ┌───────────────────────────────────────────────────────────────────────────┐  ║
+║  │                    AZURE FUNCTIONS (Serverless)                            │  ║
+║  │                         Python 3.9 Runtime                                 │  ║
+║  │                 App: 'salus-materna-monitor'                                │  ║
+║  │                                                                             │  ║
+║  │  ┌───────────────────────────────────────────────────────────────────┐    │  ║
+║  │  │  Function: predict_risk                                            │    │  ║
+║  │  │  Trigger: HTTP POST  |  Endpoint: /api/predict_risk               │    │  ║
+║  │  │                                                                    │    │  ║
+║  │  │  Process Flow:                                                     │    │  ║
+║  │  │  1. Receive JSON: {patient_id, hour, age, hr, spo2, temp,        │    │  ║
+║  │  │                    sbp, dbp}                                       │    │  ║
+║  │  │  2. Threshold checking vs clinical alert limits                   │    │  ║
+║  │  │  3. Load ensemble ML model from Blob Storage (1-hr cache)        │    │  ║
+║  │  │  4. Feature engineering:                                          │    │  ║
+║  │  │     - Inputs: HR, SpO₂, Temp, SBP, DBP, hour, age,              │    │  ║
+║  │  │               rate-of-change per vital, alert history            │    │  ║
+║  │  │  5. Run ensemble inference (RF + GB + LR)                        │    │  ║
+║  │  │  6. Output risk score 0–100                                       │    │  ║
+║  │  │  7. Append row to patient CSV in Blob Storage                    │    │  ║
+║  │  │     Columns: Hour,HR,O2Sat,Temp,SBP,DBP,Alerts,                 │    │  ║
+║  │  │              Prediction,Timestamp                                 │    │  ║
+║  │  │  8. If HIGH risk → Twilio SMS + voice call                       │    │  ║
+║  │  │  9. Return JSON response to ESP32                                 │    │  ║
+║  │  └───────────────────────────────────────────────────────────────────┘    │  ║
+║  │                                                                             │  ║
+║  │  ┌───────────────────────────────────────────────────────────────────┐    │  ║
+║  │  │  Function: sensor_alert                                            │    │  ║
+║  │  │  Trigger: HTTP POST  |  Endpoint: /api/sensor_alert               │    │  ║
+║  │  │                                                                    │    │  ║
+║  │  │  Handles:                                                          │    │  ║
+║  │  │  - FINGER_OFF alerts (IR < 50,000 ADC counts)                    │    │  ║
+║  │  │  - ABNORMAL_PARAMS alerts                                         │    │  ║
+║  │  │  - Emergency notifications                                         │    │  ║
+║  │  │  Sends SMS + voice call via Twilio (rate-limited: 1/5 min)       │    │  ║
+║  │  └───────────────────────────────────────────────────────────────────┘    │  ║
+║  │                                                                             │  ║
+║  └───────────────────────────────────────────────────────────────────────────┘  ║
+║                                    │                                             ║
+║                                    ▼                                             ║
+║  ┌───────────────────────────────────────────────────────────────────────────┐  ║
+║  │                      AZURE BLOB STORAGE                                    │  ║
+║  │              Account: 'salusmaterna' | LRS Replication                     │  ║
+║  │              Access: SAS Token (read/write/create)                         │  ║
+║  │                                                                             │  ║
+║  │  📁 patient-data/                                                           │  ║
+║  │     └── {patient_id}.csv  (per-patient time-series)                        │  ║
+║  │         Columns: Hour, HR, O2Sat, Temp, SBP, DBP,                         │  ║
+║  │                  Alerts, Prediction, Timestamp                              │  ║
+║  │         Appended every 60 s; used for trend analysis                       │  ║
+║  │                                                                             │  ║
+║  │  📁 model/                                                                  │  ║
+║  │     └── ensemble_model.pkl  (scikit-learn pickle)                           │  ║
+║  │         Ensemble: Random Forest + Gradient Boosting + Logistic Regression  │  ║
+║  │         Inputs: HR, SpO₂, Temp, SBP, DBP, hour, age,                      │  ║
+║  │                 vital-sign rates of change, alert history                  │  ║
+║  │         Output: risk score 0–100                                            │  ║
+║  │         Loaded by Azure Function (1-hr cache); hot-swappable               │  ║
+║  └───────────────────────────────────────────────────────────────────────────┘  ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+                    │                                  │
+                    │ Twilio API                        │ HTTPS
+                    ▼                                  ▼
+        ┌─────────────────────┐          ┌──────────────────────────────┐
+        │   TWILIO SERVICE    │          │  AZURE STATIC WEB APP        │
+        │                     │          │                              │
+        │  SMS + Voice Call   │          │  web_interface.html          │
+        │  Gateway            │          │                              │
+        │                     │          │  Features:                   │
+        │  Alert Types:       │          │  - Patient setup form        │
+        │  • HIGH RISK        │          │    (POST to /set_patient)    │
+        │  • FINGER_OFF       │          │  - Real-time vitals display  │
+        │  • ABNORMAL_PARAMS  │          │    HR, SpO₂, Temp, SBP, DBP │
+        │                     │          │  - Colour-coded status       │
+        │  Rate limit:        │          │    (green / yellow / red)    │
+        │  1 alert per 5 min  │          │  - Alert notification panel  │
+        │  per patient        │          │    with timestamp history    │
+        │                     │          │  - ML risk score panel       │
+        │  Voice TwiML:       │          │    (complication-specific    │
+        │  HR + SpO₂ + Temp   │          │     bar charts, 0–100)       │
+        │  + SBP + DBP values │          │                              │
+        │  read aloud × 2     │          │  Poll interval: 2 s AJAX     │
+        │                     │          │  Source: ESP32 /get_sensor_  │
+        │                     │          │          data endpoint       │
+        └─────────────────────┘          │                              │
+                    │                    │  HTTPS + global CDN          │
+                    ▼                    └──────────────────────────────┘
+        ┌─────────────────────┐                         │
+        │  📱 MEDICAL STAFF   │                         ▼
+        │     PHONE           │          ┌──────────────────────────────┐
+        │                     │          │  💻 WEB BROWSER (Any Device) │
+        │  Receives:          │          │                              │
+        │  - SMS critical      │          │  - Desktop / Tablet          │
+        │    alerts           │          │  - Smartphone                │
+        │  - Voice calls with │          │  - Hospital terminal         │
+        │    vital readings   │          │                              │
+        │                     │          │  Access via URL or QR code   │
+        │  Response time:     │          │  for instant patient data    │
+        │  < 1 minute         │          └──────────────────────────────┘
+        └─────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+DATA FLOW TIMELINE (1-Minute Monitoring Cycle):
+
+T+0s:    ESP32 reads MAX30102 (25 Hz burst)
+         └─▶ IR value, Red value → HR via peak detection
+         └─▶ SpO₂: R = (AC_red/DC_red)/(AC_ir/DC_ir); SpO₂ ≈ 110 − 25×R
+         Also samples both piezo ADC channels (GPIO34, GPIO35) @ 2 kHz
+
+T+1s:    MLX90614ESF temperature read via I2C (address 0x5A)
+         └─▶ Skin-surface IR emission → Temp °C (±0.5°C accuracy)
+         Alert logic evaluated (after 65 s stabilization period):
+         └─▶ HR < 60 (bradycardia) or > 100 bpm (tachycardia)
+         └─▶ SpO₂ < 95% (hypoxaemia)
+         └─▶ Temp < 36.0°C (hypothermia) or > 38.0°C (fever)
+         └─▶ SBP > 160 mmHg or DBP > 110 mmHg (severe hypertension)
+
+T+5s:    BP pipeline executes:
+         └─▶ IIR Butterworth BPF (0.5–8 Hz) on each piezo channel
+         └─▶ Cross-correlate → PTT = t₂ − t₁  (µs resolution)
+         └─▶ PWV = L / PTT  (L = 10–20 mm)
+         └─▶ PIR = I_H / I_L  (MAX30102 IR; typical range 1.02–1.15)
+         └─▶ ΔD = ln(PIR) / α  (α = 0.10 cm⁻¹ at 940 nm)
+         └─▶ MAP via Moens-Korteweg:
+             MAP = ln(PWV² × D × ρ / (E₀ × h)) / ξ
+             (ρ=1061 kg/m³, h=0.2mm, E₀=1,428,700 Pa, ξ=0.031/mmHg)
+         └─▶ SBP = MAP + (2/3)×PP  |  DBP = MAP − (1/3)×PP
+         └─▶ OLED updated: HR, SpO₂, Temp, SBP, DBP
+
+T+60s:   ── CLOUD UPDATE TRIGGER ──
+
+         1. ESP32 prepares JSON payload:
+            {
+              "patient_id": "KMH-2025-000001",
+              "hour": 1,
+              "age": 26,
+              "hr": 75,
+              "spo2": 97,
+              "temp": 37.2,
+              "sbp": 118,
+              "dbp": 76
+            }
+
+         2. Send HTTPS POST to Azure Function
+            └─▶ URL: https://salus-materna-monitor.../api/predict_risk
+            └─▶ Timeout: 20 seconds
+
+         3. Azure Function receives request
+            └─▶ Threshold checking on all vitals
+            └─▶ Load ensemble ML model (RF + GB + LR)
+            └─▶ Feature engineering (vital rates of change, alert history)
+            └─▶ Inference → risk_score = 12 (out of 100)
+            └─▶ Set LED: blue (LOW), no buzzer
+
+         4. Azure Function appends to patient CSV in Blob Storage
+            └─▶ Container: patient-data/{patient_id}.csv
+            └─▶ Append: "1,75,97,37.2,118,76,none,12,2026-01-30T10:30:00\n"
+
+         5. Azure Function returns response:
+            {
+              "success": true,
+              "risk_score": 12,
+              "risk_level": "LOW",
+              "led_color": "blue",
+              "activate_buzzer": false,
+              "timestamp": "2026-01-30T10:30:00"
+            }
+
+         6. ESP32 receives response
+            └─▶ Update LEDs: Blue ON, Yellow OFF, Red OFF
+            └─▶ OLED: "Risk: LOW (12/100)"
+            └─▶ No buzzer
+
+T+63s:   Resume continuous sensor reading; next cloud upload in 60 s
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+ALERT SCENARIOS:
+
+Scenario 1: HIGH RISK DETECTED
+────────────────────────────────
+Trigger: risk_score > threshold OR SBP > 160 / DBP > 110 mmHg
+
+ESP32 Actions:
+  ✓ Red LED → ON
+  ✓ Buzzer → Sound for 1 second
+  ✓ OLED → "Risk: HIGH"
+  ✓ Call /api/predict_risk → Azure triggers Twilio
+
+Azure Function + Twilio Actions:
+  ✓ Append data to patient CSV
+  ✓ SMS: "🚨 URGENT: Patient KMH-2025-000001 HIGH RISK!
+          HR:120, SpO₂:89%, Temp:39.2°C, SBP:165, DBP:112"
+  ✓ Voice call: vitals read aloud twice via TwiML
+
+Medical Staff:
+  ✓ Receive SMS + call within 1 minute
+  ✓ Check web dashboard for trend charts and risk scores
+  ✓ Respond to patient bedside
+
+
+Scenario 2: FINGER REMOVED
+───────────────────────────
+Trigger: MAX30102 IR value < 50,000 ADC counts
+
+ESP32 Actions:
+  ✓ Blue + Yellow LEDs → Flashing
+  ✓ Buzzer → Beep every second
+  ✓ OLED → "FINGER REMOVED! Place finger on sensor"
+  ✓ POST to /api/sensor_alert (alert_type: "FINGER_OFF")
+
+Azure + Twilio:
+  ✓ SMS: "⚠️ ALERT: Patient KMH-2025-000001 – Finger removed!"
+
+Medical Staff:
+  ✓ Receive SMS; verify patient; reattach sensor
+
+
+Scenario 3: ABNORMAL VITALS
+─────────────────────────────
+Trigger: HR < 60 or > 100 bpm | SpO₂ < 95% |
+         Temp < 36.0°C or > 38.0°C |
+         SBP > 160 mmHg or DBP > 110 mmHg
+
+Alert flags persist until parameter returns to normal for ≥ 60 s
+Remote alerts rate-limited to 1 per 5 minutes per patient
+
+ESP32 Actions:
+  ✓ LED colour per risk level (yellow = MODERATE)
+  ✓ OLED shows abnormal reading highlighted
+
+Azure + Twilio:
+  ✓ SMS: "⚠️ ALERT: Abnormal vital signs detected – check patient"
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+SCALABILITY:
+
+Hardware:  1 ESP32-based unit per bed @ ~KES 6,170 one-time cost
+Network:   Single WiFi network supports 100+ ESP32 devices
+Cloud:     Azure Functions scale automatically; no redeployment needed
+Model:     ensemble_model.pkl hot-swappable without function redeployment
+
+1 Patient:    ~$0.07/month
+10 Patients:  ~$0.70/month
+50 Patients:  ~$3.50/month
+100 Patients: ~$7.00/month
+
+═══════════════════════════════════════════════════════════════════════════════════
+```

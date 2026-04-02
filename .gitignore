@@ -1,0 +1,14 @@
+﻿*.py
+*.ino
+*.cpp
+*.h
+models/
+data/
+.venv/
+.idea/
+*.pkl
+*.csv
+*.h5
+__pycache__/
+.pytest_cache/
+*.log
